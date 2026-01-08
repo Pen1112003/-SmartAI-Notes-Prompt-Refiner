@@ -31,7 +31,11 @@ const App: React.FC = () => {
   const handleFinalTranscript = useCallback(async (rawTranscript: string) => {
     if (!rawTranscript.trim()) return;
 
-    const tempId = crypto.randomUUID();
+    // Fallback ID generation if crypto.randomUUID is not available
+    const tempId = typeof crypto.randomUUID === 'function' 
+      ? crypto.randomUUID() 
+      : Math.random().toString(36).substring(2, 15);
+      
     const timestamp = Date.now();
 
     const pendingNote: Note = {
@@ -50,16 +54,13 @@ const App: React.FC = () => {
     setStatus(RecordingStatus.IDLE);
 
     try {
-      // BƯỚC 1: AI tự động sửa lỗi Transcript Trực Tiếp (Lọc tạp âm, sửa từ nghe nhầm)
       const cleanedTranscript = await cleanRawTranscript(rawTranscript);
-      
-      // BƯỚC 2: Từ transcript đã sạch, AI mới phân tích ghi chú
       const aiResponse = await refineNoteWithAI(cleanedTranscript);
       
       setNotes(prev => prev.map(n => n.id === tempId ? {
         ...n,
         title: aiResponse.title || 'Meeting Note',
-        transcript: cleanedTranscript, // Lưu bản transcript đã được làm sạch
+        transcript: cleanedTranscript,
         noiDung: aiResponse.noiDung || 'Không có tóm tắt.',
         nhuocDiem: aiResponse.nhuocDiem || 'Không có dữ liệu.',
         caiThien: aiResponse.caiThien || 'Không có đề xuất.',
@@ -78,15 +79,22 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const deleteNote = (id: string) => {
+  const deleteNote = useCallback((id: string) => {
     if (window.confirm("Bạn có muốn xóa ghi chú này không?")) {
       setNotes(prev => prev.filter(note => note.id !== id));
     }
-  };
+  }, []);
 
-  const updateNote = (updatedNote: Note) => {
+  const clearAllNotes = useCallback(() => {
+    if (notes.length === 0) return;
+    if (window.confirm("Bạn có chắc chắn muốn xóa TOÀN BỘ lịch sử ghi chú? Hành động này không thể hoàn tác.")) {
+      setNotes([]);
+    }
+  }, [notes.length]);
+
+  const updateNote = useCallback((updatedNote: Note) => {
     setNotes(prev => prev.map(note => note.id === updatedNote.id ? updatedNote : note));
-  };
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
@@ -108,6 +116,17 @@ const App: React.FC = () => {
                 {notes.length}
               </span>
             </h2>
+            {notes.length > 0 && (
+              <button 
+                onClick={clearAllNotes}
+                className="text-xs font-black text-red-500 hover:text-red-700 uppercase tracking-widest px-4 py-2 bg-red-50 rounded-xl transition-colors flex items-center"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Xóa tất cả
+              </button>
+            )}
           </div>
 
           {notes.length === 0 ? (

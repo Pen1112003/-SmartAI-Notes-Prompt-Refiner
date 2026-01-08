@@ -108,7 +108,8 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onDelete, onUpdate }) => {
     return content;
   };
 
-  const exportToTxt = () => {
+  const exportToTxt = (e: React.MouseEvent) => {
+    e.stopPropagation();
     const text = generatePlainTextContent();
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -122,7 +123,8 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onDelete, onUpdate }) => {
     URL.revokeObjectURL(url);
   };
 
-  const copyForDocs = async () => {
+  const copyForDocs = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     const dateStr = new Date(note.timestamp).toLocaleString('vi-VN');
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; color: #334155;">
@@ -176,6 +178,12 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onDelete, onUpdate }) => {
   const handleRemoveImportant = (index: number) => {
     const newList = editedNote.chuYQuanTrong.filter((_, i) => i !== index);
     setEditedNote(prev => ({ ...prev, chuYQuanTrong: newList }));
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onDelete(note.id);
   };
 
   return (
@@ -245,7 +253,11 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onDelete, onUpdate }) => {
                 </svg>
               </button>
               
-              <button onClick={() => onDelete(note.id)} className="p-3 bg-red-50 text-red-500 rounded-2xl hover:bg-red-100 transition-colors shadow-sm">
+              <button 
+                onClick={handleDelete} 
+                title="Xóa ghi chú"
+                className="p-3 bg-red-50 text-red-500 rounded-2xl hover:bg-red-100 transition-colors shadow-sm cursor-pointer z-10"
+              >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
