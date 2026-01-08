@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Note, RecordingStatus } from './types';
 import Header from './components/Header';
 import Recorder from './components/Recorder';
@@ -23,50 +23,60 @@ const App: React.FC = () => {
 
   const [status, setStatus] = useState<RecordingStatus>(RecordingStatus.IDLE);
 
+  // Lưu vào localStorage, loại bỏ các ghi chú đang xử lý để tránh lưu dữ liệu rác
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+    const notesToSave = notes.filter(n => !n.isProcessing);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(notesToSave));
   }, [notes]);
 
-  const handleFinalTranscript = async (transcript: string) => {
+  const handleFinalTranscript = useCallback(async (transcript: string) => {
     if (!transcript.trim()) return;
 
-    setStatus(RecordingStatus.PROCESSING);
     const tempId = crypto.randomUUID();
     const timestamp = Date.now();
 
+    // Tạo một ghi chú "chờ" (Skeleton Note) ngay lập tức để phản hồi người dùng
+    const pendingNote: Note = {
+      id: tempId,
+      timestamp,
+      title: 'Đang tóm tắt nội dung...',
+      transcript: transcript,
+      noiDung: '',
+      nhuocDiem: '',
+      caiThien: '',
+      chuYQuanTrong: [],
+      isProcessing: true
+    };
+
+    setNotes(prev => [pendingNote, ...prev]);
+    
+    // Đặt lại trạng thái recorder về IDLE ngay lập tức để người dùng có thể ghi âm tiếp
+    setStatus(RecordingStatus.IDLE);
+
     try {
+      // AI xử lý ở chế độ nền
       const aiResponse = await refineNoteWithAI(transcript);
       
-      const newNote: Note = {
-        id: tempId,
-        timestamp,
+      setNotes(prev => prev.map(n => n.id === tempId ? {
+        ...n,
         title: aiResponse.title || 'Meeting Note',
-        transcript: transcript,
         noiDung: aiResponse.noiDung || 'Không có tóm tắt.',
         nhuocDiem: aiResponse.nhuocDiem || 'Không có dữ liệu.',
         caiThien: aiResponse.caiThien || 'Không có đề xuất.',
         chuYQuanTrong: aiResponse.chuYQuanTrong || [],
-      };
+        isProcessing: false
+      } : n));
 
-      setNotes(prev => [newNote, ...prev]);
-      setStatus(RecordingStatus.IDLE);
     } catch (error) {
       console.error("AI Refinement failed", error);
-      const fallbackNote: Note = {
-        id: tempId,
-        timestamp,
+      setNotes(prev => prev.map(n => n.id === tempId ? {
+        ...n,
         title: `Lỗi xử lý AI - ${new Date(timestamp).toLocaleTimeString()}`,
-        transcript: transcript,
         noiDung: "Đã có lỗi xảy ra khi AI tóm tắt. Transcript vẫn được lưu lại.",
-        nhuocDiem: "N/A",
-        caiThien: "N/A",
-        chuYQuanTrong: ["Hãy thử kiểm tra lại kết nối mạng."],
-      };
-      setNotes(prev => [fallbackNote, ...prev]);
-      setStatus(RecordingStatus.ERROR);
-      setTimeout(() => setStatus(RecordingStatus.IDLE), 3000);
+        isProcessing: false
+      } : n));
     }
-  };
+  }, []);
 
   const deleteNote = (id: string) => {
     if (window.confirm("Bạn có muốn xóa ghi chú này không?")) {
@@ -119,7 +129,7 @@ const App: React.FC = () => {
         </section>
       </main>
       <footer className="py-8 text-center text-slate-400 text-xs">
-        <p>© {new Date().getFullYear()} SmartAI Meeting Note v2</p>
+        <p>© {new Date().getFullYear()} SmartAI Meeting Note v2.1 (Performance Optimized)</p>
       </footer>
     </div>
   );

@@ -11,8 +11,10 @@ export function encodeBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
+const getAIClient = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+
 export async function refineNoteWithAI(fullTranscript: string): Promise<Partial<Note>> {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = getAIClient();
   
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
@@ -29,6 +31,7 @@ export async function refineNoteWithAI(fullTranscript: string): Promise<Partial<
     Trả về định dạng JSON duy nhất.`,
     config: {
       responseMimeType: "application/json",
+      thinkingConfig: { thinkingBudget: 0 }, // Tối ưu tốc độ xử lý cho Flash
       responseSchema: {
         type: Type.OBJECT,
         properties: {
@@ -44,8 +47,23 @@ export async function refineNoteWithAI(fullTranscript: string): Promise<Partial<
   });
 
   const text = response.text;
-  if (!text) {
-    throw new Error("Gemini returned no content");
-  }
+  if (!text) throw new Error("Gemini returned no content");
   return JSON.parse(text);
+}
+
+export async function polishContentWithAI(content: string, fieldType: string): Promise<string> {
+  const ai = getAIClient();
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: `Hãy chỉnh sửa và làm mượt đoạn văn bản sau đây cho phần "${fieldType}" của một ghi chú cuộc họp. 
+    Yêu cầu: Sửa lỗi chính tả, làm cho câu văn chuyên nghiệp và súc tích hơn, nhưng giữ nguyên ý nghĩa gốc.
+    Văn bản: "${content}"
+    
+    Chỉ trả về đoạn văn bản đã chỉnh sửa, không thêm lời dẫn.`,
+    config: {
+      thinkingConfig: { thinkingBudget: 0 }
+    }
+  });
+  
+  return response.text?.trim() || content;
 }

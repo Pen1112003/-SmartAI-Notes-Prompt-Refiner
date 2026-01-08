@@ -8,12 +8,13 @@ export interface Note {
   nhuocDiem: string;
   caiThien: string;
   chuYQuanTrong: string[];
+  isProcessing?: boolean; // Thuộc tính mới để xác định ghi chú đang được AI xử lý
 }
 
 export enum RecordingStatus {
   IDLE = 'IDLE',
   CONNECTING = 'CONNECTING',
   RECORDING = 'RECORDING',
-  PROCESSING = 'PROCESSING',
+  PROCESSING = 'PROCESSING', // Giữ lại để tương thích nhưng sẽ ít dùng hơn cho việc chặn UI
   ERROR = 'ERROR'
 }
