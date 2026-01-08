@@ -12,6 +12,7 @@ interface NoteCardProps {
 const NoteCard: React.FC<NoteCardProps> = ({ note, onDelete, onUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isPolishing, setIsPolishing] = useState<string | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState(false);
   const [editedNote, setEditedNote] = useState<Note>({ ...note });
 
   if (note.isProcessing) {
@@ -68,6 +69,97 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onDelete, onUpdate }) => {
     }
   };
 
+  const generatePlainTextContent = () => {
+    const headerTitle = note.title.toUpperCase() || "MEETING NOTE";
+    const dateStr = new Date(note.timestamp).toLocaleString('vi-VN');
+    
+    let content = `${headerTitle}\n`;
+    content += `==========================================\n`;
+    content += `Ngày tạo: ${dateStr}\n`;
+    content += `Hệ thống: SmartAI Meeting Notes\n`;
+    content += `==========================================\n\n`;
+
+    content += `1. NỘI DUNG CHÍNH\n`;
+    content += `------------------------------------------\n`;
+    content += `${note.noiDung}\n\n`;
+
+    content += `2. NHƯỢC ĐIỂM\n`;
+    content += `------------------------------------------\n`;
+    content += `${note.nhuocDiem}\n\n`;
+
+    content += `3. CẢI THIỆN\n`;
+    content += `------------------------------------------\n`;
+    content += `${note.caiThien}\n\n`;
+
+    content += `4. CHÚ Ý QUAN TRỌNG\n`;
+    content += `------------------------------------------\n`;
+    note.chuYQuanTrong.filter(item => item.trim() !== '').forEach(item => {
+      content += `• ${item}\n`;
+    });
+    content += `\n`;
+
+    content += `TRANSCRIPT GỐC (ĐÃ XỬ LÝ AI)\n`;
+    content += `------------------------------------------\n`;
+    content += `${note.transcript}\n\n`;
+
+    content += `==========================================\n`;
+    content += `© SmartAI Meeting Notes v2.2 - AI Correction Active`;
+    
+    return content;
+  };
+
+  const exportToTxt = () => {
+    const text = generatePlainTextContent();
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const safeTitle = note.title.replace(/[^a-z0-9àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ\s]/gi, '').replace(/\s+/g, '_');
+    a.download = `${safeTitle || 'Meeting_Note'}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const copyForDocs = async () => {
+    const dateStr = new Date(note.timestamp).toLocaleString('vi-VN');
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; color: #334155;">
+        <h1 style="color: #1e293b; border-bottom: 2px solid #4f46e5; padding-bottom: 8px;">${note.title}</h1>
+        <p style="color: #64748b; font-size: 12px;">Ngày tạo: ${dateStr}</p>
+        
+        <h2 style="color: #059669; font-size: 16px; background: #ecfdf5; padding: 8px; border-radius: 4px;">1. Nội dung chính</h2>
+        <p>${note.noiDung.replace(/\n/g, '<br>')}</p>
+
+        <h2 style="color: #dc2626; font-size: 16px; background: #fff1f2; padding: 8px; border-radius: 4px;">2. Nhược điểm</h2>
+        <p>${note.nhuocDiem.replace(/\n/g, '<br>')}</p>
+
+        <h2 style="color: #2563eb; font-size: 16px; background: #eff6ff; padding: 8px; border-radius: 4px;">3. Cải thiện</h2>
+        <p>${note.caiThien.replace(/\n/g, '<br>')}</p>
+
+        <h2 style="color: #d97706; font-size: 16px; background: #fffbeb; padding: 8px; border-radius: 4px;">4. Chú ý quan trọng</h2>
+        <ul>
+          ${note.chuYQuanTrong.filter(item => item.trim() !== '').map(item => `<li style="font-weight: bold; margin-bottom: 4px;">${item}</li>`).join('')}
+        </ul>
+        <hr style="margin-top: 24px; border: 0.5px solid #e2e8f0;">
+        <p style="font-size: 10px; color: #94a3b8; text-align: center;">Tạo bởi SmartAI Meeting Notes</p>
+      </div>
+    `;
+
+    try {
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const data = [new ClipboardItem({ 'text/html': blob })];
+      await navigator.clipboard.write(data);
+      setCopyFeedback(true);
+      setTimeout(() => setCopyFeedback(false), 2000);
+    } catch (err) {
+      await navigator.clipboard.writeText(`${note.title}\n\n${note.noiDung}`);
+      setCopyFeedback(true);
+      setTimeout(() => setCopyFeedback(false), 2000);
+    }
+  };
+
   const handleAddImportant = () => {
     setEditedNote(prev => ({
       ...prev,
@@ -84,28 +176,6 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onDelete, onUpdate }) => {
   const handleRemoveImportant = (index: number) => {
     const newList = editedNote.chuYQuanTrong.filter((_, i) => i !== index);
     setEditedNote(prev => ({ ...prev, chuYQuanTrong: newList }));
-  };
-
-  const exportToWorkspace = () => {
-    const date = new Date(note.timestamp);
-    const fileName = `Meeting Note ${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
-    const content = `
-${fileName}
--------------------------------------------
-1. NỘI DUNG CHÍNH: ${note.noiDung}
-2. NHƯỢC ĐIỂM: ${note.nhuocDiem}
-3. CẢI THIỆN: ${note.caiThien}
-4. CHÚ Ý QUAN TRỌNG: ${note.chuYQuanTrong.map(item => `• ${item}`).join('\n')}
--------------------------------------------
-Transcript: ${note.transcript}
-    `;
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${fileName}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
   };
 
   return (
@@ -143,16 +213,38 @@ Transcript: ${note.transcript}
             </>
           ) : (
             <>
+              <button 
+                onClick={copyForDocs} 
+                title="Copy định dạng để dán vào Google Docs" 
+                className={`p-3 rounded-2xl transition-all shadow-sm flex items-center space-x-2 ${copyFeedback ? 'bg-green-600 text-white' : 'bg-slate-50 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}
+              >
+                {copyFeedback ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                  </svg>
+                )}
+              </button>
+              
+              <button 
+                onClick={exportToTxt} 
+                title="Tải file văn bản (.txt)" 
+                className="p-3 bg-slate-100 text-slate-600 rounded-2xl hover:bg-slate-200 transition-all shadow-sm"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              </button>
+
               <button onClick={() => setIsEditing(true)} title="Chỉnh sửa" className="p-3 bg-slate-50 text-slate-500 rounded-2xl hover:bg-indigo-50 hover:text-indigo-600 transition-all shadow-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
               </button>
-              <button onClick={exportToWorkspace} title="Xuất" className="p-3 bg-green-50 text-green-600 rounded-2xl hover:bg-green-100 transition-colors shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </button>
+              
               <button onClick={() => onDelete(note.id)} className="p-3 bg-red-50 text-red-500 rounded-2xl hover:bg-red-100 transition-colors shadow-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
