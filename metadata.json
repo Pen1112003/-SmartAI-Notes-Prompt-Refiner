@@ -1,0 +1,7 @@
+{
+  "name": "SmartAI Notes & Prompt Refiner",
+  "description": "An intelligent note-taking application that transcribes audio and uses Gemini to transform raw thoughts into structured notes and optimized prompts.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
