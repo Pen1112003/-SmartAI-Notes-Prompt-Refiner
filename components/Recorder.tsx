@@ -21,7 +21,6 @@ const Recorder: React.FC<RecorderProps> = ({ onFinalTranscript, status, onStatus
   const fullTranscriptRef = useRef('');
   const streamRef = useRef<MediaStream | null>(null);
 
-  // Check for the special phrase "note lại đi"
   useEffect(() => {
     if (currentText.toLowerCase().includes("note lại đi") || currentText.toLowerCase().includes("ghi lại")) {
       setHasImportantFlag(true);
@@ -99,7 +98,11 @@ const Recorder: React.FC<RecorderProps> = ({ onFinalTranscript, status, onStatus
       
       sessionPromise = ai.live.connect({
         model: 'gemini-2.5-flash-native-audio-preview-12-2025',
-        config: { responseModalities: [Modality.AUDIO], inputAudioTranscription: {} },
+        config: { 
+          responseModalities: [Modality.AUDIO], 
+          inputAudioTranscription: {},
+          systemInstruction: "Bạn là một trợ lý ghi âm chuyên nghiệp. Hãy tập trung nghe và nhận diện giọng nói chính xác, bỏ qua các tạp âm môi trường."
+        },
         callbacks: {
           onopen: () => {
             onStatusChange(RecordingStatus.RECORDING);
@@ -170,11 +173,21 @@ const Recorder: React.FC<RecorderProps> = ({ onFinalTranscript, status, onStatus
               {status === RecordingStatus.RECORDING ? `Thời lượng: ${formatDuration(duration)}` : 'Hỗ trợ ghi chú thông minh tự động'}
             </p>
           </div>
-          {hasImportantFlag && (
-             <div className="mt-2 py-1 px-3 bg-amber-100 text-amber-700 rounded-full text-xs font-bold animate-bounce border border-amber-200">
-               ⭐ PHÁT HIỆN MỤC QUAN TRỌNG
-             </div>
-          )}
+          <div className="flex items-center justify-center space-x-2 mt-3">
+             {status === RecordingStatus.RECORDING && (
+               <span className="flex items-center px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-tighter animate-pulse border border-indigo-100">
+                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                 </svg>
+                 AI Noise Filtering Active
+               </span>
+             )}
+             {hasImportantFlag && (
+                <div className="py-1 px-3 bg-amber-100 text-amber-700 rounded-full text-[10px] font-black animate-bounce border border-amber-200 uppercase tracking-tighter">
+                  ⭐ PHÁT HIỆN MỤC QUAN TRỌNG
+                </div>
+             )}
+          </div>
         </div>
       </div>
 
@@ -186,6 +199,7 @@ const Recorder: React.FC<RecorderProps> = ({ onFinalTranscript, status, onStatus
               <span className={`flex h-3 w-3 rounded-full animate-pulse ${hasImportantFlag ? 'bg-amber-500' : 'bg-indigo-500'}`}></span>
               <span className="text-xs font-black text-slate-800 uppercase tracking-widest">Transcript Trực Tiếp</span>
             </div>
+            <span className="text-[10px] font-bold text-slate-400 uppercase italic">Tự động sửa lỗi văn bản sau khi kết thúc</span>
           </div>
           <p className={`text-slate-700 leading-relaxed text-lg font-medium transition-colors duration-500 ${hasImportantFlag ? 'text-amber-900 bg-amber-50/50 rounded-lg p-2' : ''}`}>
             {currentText || 'Sẵn sàng ghi nhận...'}
