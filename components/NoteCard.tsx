@@ -13,6 +13,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onDelete, onUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isPolishing, setIsPolishing] = useState<string | null>(null);
   const [copyFeedback, setCopyFeedback] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editedNote, setEditedNote] = useState<Note>({ ...note });
 
   if (note.isProcessing) {
@@ -180,10 +181,19 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onDelete, onUpdate }) => {
     setEditedNote(prev => ({ ...prev, chuYQuanTrong: newList }));
   };
 
-  const handleDelete = (e: React.MouseEvent) => {
-    e.preventDefault();
+  const confirmDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowDeleteConfirm(true);
+  };
+
+  const executeDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDelete(note.id);
+  };
+
+  const cancelDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowDeleteConfirm(false);
   };
 
   return (
@@ -221,47 +231,66 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onDelete, onUpdate }) => {
             </>
           ) : (
             <>
-              <button 
-                onClick={copyForDocs} 
-                title="Copy định dạng để dán vào Google Docs" 
-                className={`p-3 rounded-2xl transition-all shadow-sm flex items-center space-x-2 ${copyFeedback ? 'bg-green-600 text-white' : 'bg-slate-50 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}
-              >
-                {copyFeedback ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                  </svg>
-                )}
-              </button>
-              
-              <button 
-                onClick={exportToTxt} 
-                title="Tải file văn bản (.txt)" 
-                className="p-3 bg-slate-100 text-slate-600 rounded-2xl hover:bg-slate-200 transition-all shadow-sm"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-              </button>
+              {!showDeleteConfirm ? (
+                <>
+                  <button 
+                    onClick={copyForDocs} 
+                    title="Copy định dạng để dán vào Google Docs" 
+                    className={`p-3 rounded-2xl transition-all shadow-sm flex items-center space-x-2 ${copyFeedback ? 'bg-green-600 text-white' : 'bg-slate-50 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}
+                  >
+                    {copyFeedback ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                      </svg>
+                    )}
+                  </button>
+                  
+                  <button 
+                    onClick={exportToTxt} 
+                    title="Tải file văn bản (.txt)" 
+                    className="p-3 bg-slate-100 text-slate-600 rounded-2xl hover:bg-slate-200 transition-all shadow-sm"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                  </button>
 
-              <button onClick={() => setIsEditing(true)} title="Chỉnh sửa" className="p-3 bg-slate-50 text-slate-500 rounded-2xl hover:bg-indigo-50 hover:text-indigo-600 transition-all shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </button>
-              
-              <button 
-                onClick={handleDelete} 
-                title="Xóa ghi chú"
-                className="p-3 bg-red-50 text-red-500 rounded-2xl hover:bg-red-100 transition-colors shadow-sm cursor-pointer z-10"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-              </button>
+                  <button onClick={() => setIsEditing(true)} title="Chỉnh sửa" className="p-3 bg-slate-50 text-slate-500 rounded-2xl hover:bg-indigo-50 hover:text-indigo-600 transition-all shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                  
+                  <button 
+                    onClick={confirmDelete} 
+                    title="Xóa ghi chú"
+                    className="p-3 bg-red-50 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all shadow-sm cursor-pointer"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </>
+              ) : (
+                <div className="flex items-center bg-red-50 p-1.5 rounded-2xl space-x-1 animate-in zoom-in-95 duration-200 border border-red-100">
+                   <button 
+                    onClick={executeDelete} 
+                    className="px-3 py-2 bg-red-600 text-white text-[10px] font-black uppercase rounded-xl hover:bg-red-700 shadow-lg shadow-red-100"
+                  >
+                    XÓA NGAY
+                  </button>
+                  <button 
+                    onClick={cancelDelete} 
+                    className="px-3 py-2 bg-slate-200 text-slate-600 text-[10px] font-black uppercase rounded-xl hover:bg-slate-300"
+                  >
+                    HỦY
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>

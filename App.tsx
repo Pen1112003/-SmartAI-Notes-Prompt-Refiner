@@ -22,6 +22,7 @@ const App: React.FC = () => {
   });
 
   const [status, setStatus] = useState<RecordingStatus>(RecordingStatus.IDLE);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   useEffect(() => {
     const notesToSave = notes.filter(n => !n.isProcessing);
@@ -31,7 +32,6 @@ const App: React.FC = () => {
   const handleFinalTranscript = useCallback(async (rawTranscript: string) => {
     if (!rawTranscript.trim()) return;
 
-    // Fallback ID generation if crypto.randomUUID is not available
     const tempId = typeof crypto.randomUUID === 'function' 
       ? crypto.randomUUID() 
       : Math.random().toString(36).substring(2, 15);
@@ -80,17 +80,13 @@ const App: React.FC = () => {
   }, []);
 
   const deleteNote = useCallback((id: string) => {
-    if (window.confirm("Bạn có muốn xóa ghi chú này không?")) {
-      setNotes(prev => prev.filter(note => note.id !== id));
-    }
+    setNotes(prev => prev.filter(note => note.id !== id));
   }, []);
 
-  const clearAllNotes = useCallback(() => {
-    if (notes.length === 0) return;
-    if (window.confirm("Bạn có chắc chắn muốn xóa TOÀN BỘ lịch sử ghi chú? Hành động này không thể hoàn tác.")) {
-      setNotes([]);
-    }
-  }, [notes.length]);
+  const handleClearAll = () => {
+    setNotes([]);
+    setShowClearConfirm(false);
+  };
 
   const updateNote = useCallback((updatedNote: Note) => {
     setNotes(prev => prev.map(note => note.id === updatedNote.id ? updatedNote : note));
@@ -116,16 +112,37 @@ const App: React.FC = () => {
                 {notes.length}
               </span>
             </h2>
+            
             {notes.length > 0 && (
-              <button 
-                onClick={clearAllNotes}
-                className="text-xs font-black text-red-500 hover:text-red-700 uppercase tracking-widest px-4 py-2 bg-red-50 rounded-xl transition-colors flex items-center"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                Xóa tất cả
-              </button>
+              <div className="relative flex items-center">
+                {!showClearConfirm ? (
+                  <button 
+                    onClick={() => setShowClearConfirm(true)}
+                    className="text-xs font-black text-red-500 hover:text-red-700 uppercase tracking-widest px-4 py-2 bg-red-50 rounded-xl transition-all flex items-center hover:shadow-md active:scale-95"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Xóa sạch
+                  </button>
+                ) : (
+                  <div className="flex items-center space-x-2 animate-in slide-in-from-right-4 duration-200">
+                    <span className="text-[10px] font-black text-red-600 uppercase tracking-tighter mr-1">Chắc chứ?</span>
+                    <button 
+                      onClick={handleClearAll}
+                      className="text-xs font-black bg-red-600 text-white px-3 py-2 rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-100"
+                    >
+                      XÓA HẾT
+                    </button>
+                    <button 
+                      onClick={() => setShowClearConfirm(false)}
+                      className="text-xs font-black bg-slate-200 text-slate-600 px-3 py-2 rounded-xl hover:bg-slate-300 transition-colors"
+                    >
+                      HỦY
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 

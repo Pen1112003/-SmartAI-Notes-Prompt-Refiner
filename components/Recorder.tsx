@@ -69,17 +69,33 @@ const Recorder: React.FC<RecorderProps> = ({ onFinalTranscript, status, onStatus
 
       const startAudioStreaming = async () => {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          // Kích hoạt Auto Gain Control và Noise Suppression từ trình duyệt
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+              autoGainControl: true,
+              echoCancellation: true,
+              noiseSuppression: true,
+              channelCount: 1
+            } 
+          });
+          
           streamRef.current = stream;
           audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+          
           const source = audioContextRef.current.createMediaStreamSource(stream);
+          
+          // Thêm GainNode để khuếch đại âm thanh nhỏ (Sensitivity Boost)
+          const gainNode = audioContextRef.current.createGain();
+          gainNode.gain.value = 2.5; // Tăng cường độ âm thanh lên 2.5 lần
+          
           const scriptProcessor = audioContextRef.current.createScriptProcessor(4096, 1, 1);
 
           scriptProcessor.onaudioprocess = (e) => {
             const inputData = e.inputBuffer.getChannelData(0);
             const int16 = new Int16Array(inputData.length);
             for (let i = 0; i < inputData.length; i++) {
-              int16[i] = inputData[i] * 32768;
+              // Chuyển đổi sang PCM 16-bit
+              int16[i] = Math.max(-1, Math.min(1, inputData[i])) * 32768;
             }
             const base64 = encodeBase64(new Uint8Array(int16.buffer));
             sessionPromise.then((session) => {
@@ -87,10 +103,14 @@ const Recorder: React.FC<RecorderProps> = ({ onFinalTranscript, status, onStatus
             });
           };
 
-          source.connect(scriptProcessor);
+          // Pipeline: Source -> Gain (Amplify) -> ScriptProcessor
+          source.connect(gainNode);
+          gainNode.connect(scriptProcessor);
           scriptProcessor.connect(audioContextRef.current.destination);
+          
           timerRef.current = window.setInterval(() => setDuration(prev => prev + 1), 1000);
         } catch (err) {
+          console.error("Audio stream error:", err);
           onStatusChange(RecordingStatus.ERROR);
           stopEverything();
         }
@@ -101,7 +121,7 @@ const Recorder: React.FC<RecorderProps> = ({ onFinalTranscript, status, onStatus
         config: { 
           responseModalities: [Modality.AUDIO], 
           inputAudioTranscription: {},
-          systemInstruction: "Bạn là một trợ lý ghi âm chuyên nghiệp. Hãy tập trung nghe và nhận diện giọng nói chính xác, bỏ qua các tạp âm môi trường."
+          systemInstruction: "Bạn là một trợ lý ghi âm chuyên nghiệp. Bạn có khả năng nghe cực tốt ngay cả với âm thanh nhỏ hoặc xa. Hãy tập trung nhận diện giọng nói, bỏ qua tạp âm trắng. Nếu người nói nói nhỏ, hãy cố gắng suy luận từ ngữ dựa trên ngữ cảnh cuộc họp."
         },
         callbacks: {
           onopen: () => {
@@ -116,11 +136,16 @@ const Recorder: React.FC<RecorderProps> = ({ onFinalTranscript, status, onStatus
               setCurrentText(prev => prev + text);
             }
           },
-          onerror: (e) => { onStatusChange(RecordingStatus.ERROR); stopEverything(); },
+          onerror: (e) => { 
+            console.error("Live session error:", e);
+            onStatusChange(RecordingStatus.ERROR); 
+            stopEverything(); 
+          },
           onclose: () => { if (status === RecordingStatus.RECORDING) handleStop(); }
         }
       });
     } catch (err) {
+      console.error("Connection error:", err);
       onStatusChange(RecordingStatus.ERROR);
     }
   };
@@ -173,14 +198,22 @@ const Recorder: React.FC<RecorderProps> = ({ onFinalTranscript, status, onStatus
               {status === RecordingStatus.RECORDING ? `Thời lượng: ${formatDuration(duration)}` : 'Hỗ trợ ghi chú thông minh tự động'}
             </p>
           </div>
-          <div className="flex items-center justify-center space-x-2 mt-3">
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
              {status === RecordingStatus.RECORDING && (
-               <span className="flex items-center px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-tighter animate-pulse border border-indigo-100">
-                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                 </svg>
-                 AI Noise Filtering Active
-               </span>
+               <>
+                <span className="flex items-center px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-tighter animate-pulse border border-indigo-100">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Noise Filter Active
+                </span>
+                <span className="flex items-center px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-tighter border border-emerald-100">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  Sensitivity Boost (2.5x)
+                </span>
+               </>
              )}
              {hasImportantFlag && (
                 <div className="py-1 px-3 bg-amber-100 text-amber-700 rounded-full text-[10px] font-black animate-bounce border border-amber-200 uppercase tracking-tighter">
@@ -199,7 +232,7 @@ const Recorder: React.FC<RecorderProps> = ({ onFinalTranscript, status, onStatus
               <span className={`flex h-3 w-3 rounded-full animate-pulse ${hasImportantFlag ? 'bg-amber-500' : 'bg-indigo-500'}`}></span>
               <span className="text-xs font-black text-slate-800 uppercase tracking-widest">Transcript Trực Tiếp</span>
             </div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase italic">Tự động sửa lỗi văn bản sau khi kết thúc</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase italic">Tự động khuếch đại âm thanh nhỏ</span>
           </div>
           <p className={`text-slate-700 leading-relaxed text-lg font-medium transition-colors duration-500 ${hasImportantFlag ? 'text-amber-900 bg-amber-50/50 rounded-lg p-2' : ''}`}>
             {currentText || 'Sẵn sàng ghi nhận...'}
