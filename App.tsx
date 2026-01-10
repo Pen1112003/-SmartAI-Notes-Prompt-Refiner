@@ -41,7 +41,7 @@ const App: React.FC = () => {
     const pendingNote: Note = {
       id: tempId,
       timestamp,
-      title: 'Đang xử lý nội dung & lọc tạp âm...',
+      title: 'Đang xử lý nội dung...',
       transcript: rawTranscript,
       noiDung: '',
       nhuocDiem: '',
@@ -93,9 +93,11 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className="min-h-screen flex flex-col bg-[#F3F4F6] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-100/40 via-slate-50 to-white text-slate-800 font-sans">
       <Header />
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-8 md:py-12 space-y-12">
+      
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 md:py-12 space-y-10">
+        {/* Recorder Section - Sticky but with backdrop blur for cleaner overlay */}
         <section className="sticky top-20 z-20">
           <Recorder 
             status={status} 
@@ -104,54 +106,65 @@ const App: React.FC = () => {
           />
         </section>
 
-        <section className="pb-20">
-          <div className="flex items-center justify-between mb-8 border-b border-slate-200 pb-4">
-            <h2 className="text-2xl font-black text-slate-900 flex items-center">
-              Lịch sử ghi chú
-              <span className="ml-3 px-3 py-1 text-sm bg-indigo-100 text-indigo-700 rounded-full font-bold">
-                {notes.length}
-              </span>
-            </h2>
+        {/* Notes List Section */}
+        <section className="pb-24">
+          <div className="flex items-end justify-between mb-6 px-2">
+            <div>
+              <h2 className="text-3xl font-bold text-slate-800 tracking-tight flex items-center">
+                Lịch sử ghi chú
+              </h2>
+              <p className="text-slate-500 text-sm mt-1">Danh sách các cuộc họp đã được AI xử lý</p>
+            </div>
             
-            {notes.length > 0 && (
-              <div className="relative flex items-center">
-                {!showClearConfirm ? (
-                  <button 
-                    onClick={() => setShowClearConfirm(true)}
-                    className="text-xs font-black text-red-500 hover:text-red-700 uppercase tracking-widest px-4 py-2 bg-red-50 rounded-xl transition-all flex items-center hover:shadow-md active:scale-95"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    Xóa sạch
-                  </button>
-                ) : (
-                  <div className="flex items-center space-x-2 animate-in slide-in-from-right-4 duration-200">
-                    <span className="text-[10px] font-black text-red-600 uppercase tracking-tighter mr-1">Chắc chứ?</span>
+            <div className="flex items-center gap-3">
+               <span className="px-3 py-1 text-xs font-bold bg-white text-indigo-600 rounded-full border border-indigo-100 shadow-sm">
+                {notes.length} bản ghi
+              </span>
+              
+              {notes.length > 0 && (
+                <div className="relative">
+                  {!showClearConfirm ? (
                     <button 
-                      onClick={handleClearAll}
-                      className="text-xs font-black bg-red-600 text-white px-3 py-2 rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-100"
+                      onClick={() => setShowClearConfirm(true)}
+                      className="text-xs font-bold text-slate-500 hover:text-red-600 px-3 py-2 bg-white hover:bg-red-50 rounded-xl transition-all border border-slate-200 hover:border-red-200 shadow-sm flex items-center gap-2 group"
                     >
-                      XÓA HẾT
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400 group-hover:text-red-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Xóa tất cả
                     </button>
-                    <button 
-                      onClick={() => setShowClearConfirm(false)}
-                      className="text-xs font-black bg-slate-200 text-slate-600 px-3 py-2 rounded-xl hover:bg-slate-300 transition-colors"
-                    >
-                      HỦY
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
+                  ) : (
+                    <div className="flex items-center gap-2 animate-in slide-in-from-right-4 duration-200 bg-white p-1 pr-1.5 rounded-xl border border-red-100 shadow-sm">
+                      <button 
+                        onClick={handleClearAll}
+                        className="text-xs font-bold bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 transition-colors shadow-sm"
+                      >
+                        Xác nhận xóa
+                      </button>
+                      <button 
+                        onClick={() => setShowClearConfirm(false)}
+                        className="text-xs font-bold text-slate-500 hover:bg-slate-100 px-2 py-1.5 rounded-lg transition-colors"
+                      >
+                        Hủy
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {notes.length === 0 ? (
-            <div className="text-center py-24 bg-white rounded-[3rem] border-2 border-dashed border-slate-200">
-              <p className="text-slate-400 font-bold">Chưa có ghi chú nào được lưu. Hãy bắt đầu ghi âm!</p>
+            <div className="text-center py-24 bg-white/60 backdrop-blur-sm rounded-3xl border border-dashed border-slate-300">
+              <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+              </div>
+              <p className="text-slate-500 font-medium">Chưa có ghi chú nào. Nhấn nút ghi âm để bắt đầu!</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {notes.map(note => (
                 <NoteCard 
                   key={note.id} 
@@ -164,8 +177,9 @@ const App: React.FC = () => {
           )}
         </section>
       </main>
-      <footer className="py-8 text-center text-slate-400 text-xs">
-        <p>© {new Date().getFullYear()} SmartAI Meeting Note v2.2 (AI Auto-Correction Active)</p>
+      
+      <footer className="py-8 text-center text-slate-400 text-xs font-medium border-t border-slate-200/60 bg-white/40 backdrop-blur-md">
+        <p>© {new Date().getFullYear()} SmartAI Meeting Note v2.3 - Powered by Google Gemini</p>
       </footer>
     </div>
   );
